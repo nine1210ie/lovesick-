@@ -2415,12 +2415,23 @@ ${customTitle ? `\u3010\u6307\u5B9A\u6807\u9898\u3011\uFF1A${customTitle}
     }
   });
   const httpServer = import_http.default.createServer(app);
+  httpServer.on("clientError", (err, socket) => {
+    if (err?.code === "ECONNRESET" || !socket.writable) return;
+    try {
+      socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+    } catch {
+    }
+  });
+  httpServer.on("error", (err) => {
+    console.error("[AI Phone] HTTP server error:", err);
+  });
   if (process.env.NODE_ENV !== "production") {
     const isHmrDisabled = process.env.DISABLE_HMR === "true";
     const vite = await (0, import_vite.createServer)({
       server: {
         middlewareMode: true,
-        hmr: isHmrDisabled ? false : { server: httpServer }
+        hmr: isHmrDisabled ? false : { server: httpServer },
+        watch: isHmrDisabled ? null : {}
       },
       appType: "spa"
     });
@@ -2436,6 +2447,12 @@ ${customTitle ? `\u3010\u6307\u5B9A\u6807\u9898\u3011\uFF1A${customTitle}
     console.log(`[AI Phone] Server running on http://${HOST}:${PORT}`);
   });
 }
+process.on("unhandledRejection", (reason) => {
+  console.error("[AI Phone] Unhandled promise rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[AI Phone] Uncaught exception:", err);
+});
 startServer().catch((err) => {
   console.error("Failed to start server:", err);
 });
