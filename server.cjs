@@ -636,7 +636,7 @@ ${oErr?.message || String(oErr)}`
           }
         }
       });
-      const historyFormatted = normalizedMessages.map((msg, idx) => {
+      const rawHistoryFormatted = normalizedMessages.map((msg, idx) => {
         const isLastUser = idx === normalizedMessages.length - 1 && msg.role === "user";
         if (isLastUser && resolvedImage && resolvedImage.base64Data) {
           return {
@@ -652,6 +652,21 @@ ${oErr?.message || String(oErr)}`
           parts: [{ text: msg.content }]
         };
       });
+      const historyFormatted = [];
+      for (const item of rawHistoryFormatted) {
+        const prev = historyFormatted[historyFormatted.length - 1];
+        if (prev && prev.role === item.role) {
+          prev.parts.push(...item.parts);
+        } else {
+          historyFormatted.push({ role: item.role, parts: [...item.parts] });
+        }
+      }
+      if (historyFormatted.length > 0 && historyFormatted[0].role === "model") {
+        historyFormatted.unshift({
+          role: "user",
+          parts: [{ text: "\uFF08\u4EE5\u4E0B\u662F\u89D2\u8272\u4E3B\u52A8\u53D1\u8D77\u7684\u5386\u53F2\u6D88\u606F\u8BB0\u5F55\uFF09" }]
+        });
+      }
       const modelCandidates = rawModel.toLowerCase().startsWith("gemini") ? Array.from(/* @__PURE__ */ new Set([rawModel, ...DEFAULT_GEMINI_MODELS])) : DEFAULT_GEMINI_MODELS;
       let replyText = "";
       let usedModelName = rawModel;
